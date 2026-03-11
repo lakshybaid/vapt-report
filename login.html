@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sign In · VAPT Report Generator · Ethical Byte</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0B1120;--ink2:#111827;--panel:#182030;--panel2:#1C2840;
+  --rim:#253348;--rim2:#2E4060;
+  --txt:#D9E4F0;--txt2:#94A8C2;--txt3:#56708A;
+  --accent:#4472C4;--accent2:#2F5496;--accent3:#5B9BD5;
+  --glow:rgba(68,114,196,.25);
+  --green:#22c55e;--green-bg:rgba(34,197,94,.08);--green-rim:rgba(34,197,94,.3);
+  --err:#ef4444;--err-rim:rgba(239,68,68,.3);--err-bg:rgba(239,68,68,.06);
+  --mono:'IBM Plex Mono',monospace;--ui:'Space Grotesk',sans-serif;
+  --r:6px;--r2:10px;--r3:14px;
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:var(--ui);background:var(--ink);color:var(--txt);
+  min-height:100vh;display:flex;flex-direction:column;
+  background-image:
+    radial-gradient(ellipse 120% 60% at 70% -10%,rgba(68,114,196,.12) 0%,transparent 60%),
+    radial-gradient(ellipse 80% 40% at 0% 80%,rgba(47,84,150,.08) 0%,transparent 50%);
+}
+
+/* ── topbar ─────────────────────────────────────── */
+.topbar{height:54px;display:flex;align-items:center;gap:1rem;padding:0 2rem;background:rgba(11,17,32,.7);backdrop-filter:blur(20px);border-bottom:1px solid var(--rim);flex-shrink:0}
+.topbar-logo{font-family:var(--mono);font-size:.75rem;font-weight:500;color:var(--accent3);display:flex;align-items:center;gap:.5rem}
+.topbar-logo span{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);display:inline-block}
+.topbar-pipe{width:1px;height:18px;background:var(--rim2)}
+.topbar-tag{font-family:var(--mono);font-size:.6rem;color:var(--txt3);background:var(--panel);border:1px solid var(--rim);padding:.15rem .55rem;border-radius:20px;letter-spacing:1.5px;text-transform:uppercase}
+
+/* ── layout ─────────────────────────────────────── */
+.center{flex:1;display:flex;align-items:center;justify-content:center;padding:2rem 1rem}
+.card{width:100%;max-width:440px;background:var(--panel);border:1px solid var(--rim);border-radius:var(--r3);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.45),0 0 0 1px rgba(68,114,196,.06);animation:slideUp .4s var(--ease) both}
+@keyframes slideUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── card header ─────────────────────────────────── */
+.card-header{padding:1.75rem 2rem 1.5rem;border-bottom:1px solid var(--rim);background:linear-gradient(135deg,rgba(68,114,196,.07) 0%,transparent 60%)}
+.eyebrow{font-family:var(--mono);font-size:.6rem;color:var(--accent3);letter-spacing:2px;text-transform:uppercase;margin-bottom:.55rem;display:flex;align-items:center;gap:.4rem}
+.eyebrow::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--accent3);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.card-title{font-size:1.35rem;font-weight:700;color:var(--txt);letter-spacing:-.02em;margin-bottom:.25rem}
+.card-sub{font-size:.8rem;color:var(--txt3);line-height:1.55}
+
+/* ── tabs ────────────────────────────────────────── */
+.tabs{display:flex;border-bottom:1px solid var(--rim);background:rgba(11,17,32,.3)}
+.tab{flex:1;padding:.75rem 1rem;font-family:var(--mono);font-size:.68rem;font-weight:500;color:var(--txt3);text-transform:uppercase;letter-spacing:1px;text-align:center;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s var(--ease)}
+.tab:hover{color:var(--txt2)}
+.tab.active{color:var(--accent3);border-bottom-color:var(--accent)}
+
+/* ── card body ───────────────────────────────────── */
+.card-body{padding:1.75rem 2rem}
+.panel{display:none;animation:fadeIn .25s var(--ease) both}
+.panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── form ────────────────────────────────────────── */
+.fgroup{margin-bottom:1.1rem}
+label{display:block;font-family:var(--mono);font-size:.62rem;color:var(--txt3);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:.45rem}
+.iw{position:relative}
+input[type=text],input[type=email],input[type=password],input[type=tel]{
+  width:100%;background:var(--ink2);border:1px solid var(--rim2);border-radius:var(--r);
+  color:var(--txt);font-family:var(--ui);font-size:.88rem;padding:.62rem .85rem;outline:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
+input::placeholder{color:var(--txt3)}
+/* phone flag prefix */
+.phone-wrap{display:flex;gap:.5rem;align-items:stretch}
+.phone-prefix{
+  background:var(--ink2);border:1px solid var(--rim2);border-radius:var(--r);
+  color:var(--txt2);font-family:var(--mono);font-size:.82rem;
+  padding:.62rem .75rem;white-space:nowrap;flex-shrink:0;
+  display:flex;align-items:center;gap:.35rem;
+}
+.phone-prefix select{
+  background:transparent;border:none;outline:none;color:var(--txt2);
+  font-family:var(--mono);font-size:.82rem;cursor:pointer;
+  appearance:none;-webkit-appearance:none;padding-right:.1rem;
+}
+.phone-prefix select option{background:#1C2840;color:var(--txt)}
+.phone-input{flex:1;min-width:0}
+.eye{position:absolute;right:.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--txt3);cursor:pointer;padding:.15rem;line-height:0;transition:color .15s}
+.eye:hover{color:var(--txt2)}
+svg{display:block}
+
+/* ── OTP boxes ───────────────────────────────────── */
+.otp-row{display:flex;gap:.5rem;justify-content:center}
+.otp-cell{
+  width:46px;height:54px;
+  background:var(--ink2);border:1px solid var(--rim2);
+  border-radius:var(--r);color:var(--txt);
+  font-family:var(--mono);font-size:1.5rem;font-weight:700;
+  text-align:center;outline:none;
+  transition:border-color .15s,box-shadow .15s;
+  caret-color:var(--accent3);
+}
+.otp-cell:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
+.otp-cell.filled{border-color:var(--accent2);color:var(--accent3)}
+.otp-cell.bad{border-color:var(--err)!important;box-shadow:0 0 0 3px var(--err-rim)!important}
+
+/* ── SMS sent banner ─────────────────────────────── */
+.sms-banner{
+  background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);
+  border-radius:var(--r2);padding:.85rem 1rem;
+  display:flex;align-items:flex-start;gap:.7rem;margin-bottom:1.2rem;
+}
+.sms-banner-icon{width:32px;height:32px;border-radius:50%;background:rgba(34,197,94,.15);border:1.5px solid rgba(34,197,94,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--green)}
+.sms-banner-body{}
+.sms-banner-title{font-size:.82rem;font-weight:600;color:var(--green);margin-bottom:.15rem}
+.sms-banner-sub{font-size:.75rem;color:var(--txt3);line-height:1.5}
+.sms-banner-phone{font-family:var(--mono);font-size:.8rem;color:var(--txt2)}
+
+/* ── alerts ──────────────────────────────────────── */
+.alert{padding:.65rem .9rem;border-radius:var(--r);font-size:.8rem;line-height:1.5;margin-bottom:1rem;display:none}
+.alert.show{display:block}
+.ae{background:var(--err-bg);border:1px solid var(--err-rim);color:var(--err)}
+.ao{background:var(--green-bg);border:1px solid var(--green-rim);color:var(--green)}
+.ai{background:rgba(68,114,196,.08);border:1px solid rgba(68,114,196,.2);color:var(--accent3)}
+
+/* ── buttons ─────────────────────────────────────── */
+.btn{
+  width:100%;padding:.72rem 1.2rem;
+  background:var(--accent);border:none;border-radius:var(--r);
+  color:#fff;font-family:var(--ui);font-size:.9rem;font-weight:600;
+  cursor:pointer;letter-spacing:.01em;transition:all .15s var(--ease);
+}
+.btn:hover{background:#3d67b8;box-shadow:0 4px 20px rgba(68,114,196,.4)}
+.btn:active{transform:scale(.99)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* ── step dots ───────────────────────────────────── */
+.dots{display:flex;gap:.5rem;justify-content:center;margin-bottom:1.25rem}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--rim2);transition:all .25s}
+.dot.active{background:var(--accent);box-shadow:0 0 8px var(--glow);width:20px;border-radius:4px}
+.dot.done{background:var(--accent2)}
+
+/* ── spinner ─────────────────────────────────────── */
+.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;margin-right:.4rem;vertical-align:middle}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* ── timer ───────────────────────────────────────── */
+.timer{font-family:var(--mono);font-size:.72rem;color:var(--txt3);text-align:center;margin-top:.45rem}
+.timer b{color:var(--accent3)}
+
+/* ── success ─────────────────────────────────────── */
+.ok-icon{width:56px;height:56px;border-radius:50%;background:var(--green-bg);border:2px solid var(--green-rim);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;color:var(--green);font-size:1.6rem;animation:pop .4s var(--ease) both}
+@keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* ── help text ───────────────────────────────────── */
+.help{font-size:.75rem;color:var(--txt3);text-align:center;margin-top:.75rem}
+.help button{color:var(--accent3);background:none;border:none;cursor:pointer;font-size:inherit;padding:0}
+.help button:hover{text-decoration:underline}
+.card-footer{padding:.85rem 2rem;border-top:1px solid var(--rim);text-align:center;font-size:.73rem;color:var(--txt3)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo"><span></span>VAPT·REPORT·GEN</div>
+  <div class="topbar-pipe"></div>
+  <div class="topbar-tag">Ethical Byte</div>
+</div>
+
+<div class="center">
+<div class="card">
+
+  <div class="card-header">
+    <div class="eyebrow">Secure Access</div>
+    <div class="card-title">Welcome</div>
+    <div class="card-sub">Sign in or create an account. New accounts are verified by SMS.</div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" id="tab-login" onclick="switchTab('login')">Sign In</div>
+    <div class="tab" id="tab-register" onclick="switchTab('register')">Create Account</div>
+  </div>
+
+  <div class="card-body">
+
+    <!-- ═══════════ LOGIN ═══════════ -->
+    <div class="panel active" id="panel-login">
+      <div class="alert ae" id="l-err"></div>
+      <div class="alert ao" id="l-ok"></div>
+
+      <div class="fgroup">
+        <label>Email Address</label>
+        <input type="email" id="l-email" placeholder="you@company.com" autocomplete="email">
+      </div>
+      <div class="fgroup">
+        <label>Password</label>
+        <div class="iw">
+          <input type="password" id="l-pass" placeholder="Your password" autocomplete="current-password" style="padding-right:2.5rem">
+          <button class="eye" onclick="toggleEye('l-pass',this)" type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <button class="btn" id="l-btn" onclick="doLogin()">Sign In</button>
+      <div class="help">No account? <button onclick="switchTab('register')">Create one</button></div>
+    </div>
+
+    <!-- ═══════════ REGISTER ═══════════ -->
+    <div class="panel" id="panel-register">
+
+      <!-- Step 1 — account details -->
+      <div id="s1">
+        <div class="dots">
+          <div class="dot active"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+
+        <div class="alert ae" id="r-err1"></div>
+
+        <div class="fgroup">
+          <label>Full Name</label>
+          <input type="text" id="r-name" placeholder="Jane Smith" autocomplete="name">
+        </div>
+        <div class="fgroup">
+          <label>Email Address</label>
+          <input type="email" id="r-email" placeholder="you@company.com" autocomplete="email">
+        </div>
+        <div class="fgroup">
+          <label>Mobile Number <span style="font-size:.65rem;color:var(--txt3);font-family:var(--mono);text-transform:none;letter-spacing:0">(with country code)</span></label>
+          <div class="phone-wrap">
+            <div class="phone-prefix">
+              <select id="r-cc" title="Country code">
+                <option value="+91">🇮🇳 +91</option>
+                <option value="+1">🇺🇸 +1</option>
+                <option value="+44">🇬🇧 +44</option>
+                <option value="+61">🇦🇺 +61</option>
+                <option value="+65">🇸🇬 +65</option>
+                <option value="+971">🇦🇪 +971</option>
+                <option value="+49">🇩🇪 +49</option>
+                <option value="+33">🇫🇷 +33</option>
+                <option value="+81">🇯🇵 +81</option>
+                <option value="+86">🇨🇳 +86</option>
+                <option value="+55">🇧🇷 +55</option>
+                <option value="+27">🇿🇦 +27</option>
+              </select>
+            </div>
+            <input type="tel" id="r-phone" class="phone-input" placeholder="9876543210" autocomplete="tel-national">
+          </div>
+          <div style="font-size:.7rem;color:var(--txt3);margin-top:.35rem">An SMS OTP will be sent to this number via Twilio.</div>
+        </div>
+        <div class="fgroup">
+          <label>Password</label>
+          <div class="iw">
+            <input type="password" id="r-pass" placeholder="Min. 8 characters" autocomplete="new-password" style="padding-right:2.5rem">
+            <button class="eye" onclick="toggleEye('r-pass',this)" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="fgroup">
+          <label>Confirm Password</label>
+          <div class="iw">
+            <input type="password" id="r-pass2" placeholder="Repeat password" autocomplete="new-password" style="padding-right:2.5rem">
+            <button class="eye" onclick="toggleEye('r-pass2',this)" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <button class="btn" id="r-btn1" onclick="doRegStep1()">Send SMS Code &rarr;</button>
+        <div class="help">Already registered? <button onclick="switchTab('login')">Sign in</button></div>
+      </div>
+
+      <!-- Step 2 — OTP entry -->
+      <div id="s2" style="display:none">
+        <div class="dots">
+          <div class="dot done"></div>
+          <div class="dot active"></div>
+          <div class="dot"></div>
+        </div>
+
+        <!-- SMS sent confirmation banner -->
+        <div class="sms-banner" id="sms-banner">
+          <div class="sms-banner-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="sms-banner-body">
+            <div class="sms-banner-title">SMS Sent via Twilio</div>
+            <div class="sms-banner-sub">6-digit code sent to <span class="sms-banner-phone" id="sms-phone-display"></span></div>
+          </div>
+        </div>
+
+        <div class="alert ae" id="r-err2"></div>
+        <div class="alert ao" id="r-ok2"></div>
+
+        <div class="fgroup">
+          <label>Enter OTP from SMS</label>
+          <div class="otp-row">
+            <input class="otp-cell" maxlength="1" id="o0" oninput="oi(0)" onkeydown="ok_(event,0)">
+            <input class="otp-cell" maxlength="1" id="o1" oninput="oi(1)" onkeydown="ok_(event,1)">
+            <input class="otp-cell" maxlength="1" id="o2" oninput="oi(2)" onkeydown="ok_(event,2)">
+            <input class="otp-cell" maxlength="1" id="o3" oninput="oi(3)" onkeydown="ok_(event,3)">
+            <input class="otp-cell" maxlength="1" id="o4" oninput="oi(4)" onkeydown="ok_(event,4)">
+            <input class="otp-cell" maxlength="1" id="o5" oninput="oi(5)" onkeydown="ok_(event,5)">
+          </div>
+          <div class="timer">Expires in <b id="otp-timer">10:00</b></div>
+        </div>
+
+        <button class="btn" id="r-btn2" onclick="doVerify()">Verify &amp; Create Account</button>
+        <div class="help">
+          <button id="resend-btn" onclick="doResend()">Resend SMS</button>
+          &nbsp;&middot;&nbsp;
+          <button onclick="backToS1()">Change details</button>
+        </div>
+      </div>
+
+      <!-- Step 3 — success -->
+      <div id="s3" style="display:none;text-align:center">
+        <div class="dots">
+          <div class="dot done"></div>
+          <div class="dot done"></div>
+          <div class="dot active"></div>
+        </div>
+        <div class="ok-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div style="font-size:1.1rem;font-weight:600;margin-bottom:.4rem">Account Created!</div>
+        <div style="font-size:.82rem;color:var(--txt3);margin-bottom:1.5rem;line-height:1.6">
+          Phone verified &amp; account ready.<br>Sign in to start generating VAPT reports.
+        </div>
+        <button class="btn" onclick="switchTab('login')">Go to Sign In</button>
+      </div>
+
+    </div><!-- /register -->
+  </div><!-- /card-body -->
+
+  <div class="card-footer">
+    SMS verification powered by Twilio &nbsp;&middot;&nbsp; Ethical Byte &copy; 2025
+  </div>
+</div>
+</div>
+
+<script>
+/* ── state ─────────────────────────────── */
+let RE='', RN='', RP='', RPHONE='';
+let timerID = null;
+
+/* ── tab switch ────────────────────────── */
+function switchTab(t){
+  ['login','register'].forEach(x=>{
+    document.getElementById('tab-'+x).classList.toggle('active', x===t);
+    document.getElementById('panel-'+x).classList.toggle('active', x===t);
+  });
+  clearAlerts();
+}
+function clearAlerts(){ document.querySelectorAll('.alert').forEach(a=>a.classList.remove('show')) }
+function sa(id,msg){ const e=document.getElementById(id); e.innerHTML=msg; e.classList.add('show') }
+function ha(id){ document.getElementById(id).classList.remove('show') }
+
+/* ── eye toggle ────────────────────────── */
+const EYE_ON  = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const EYE_OFF = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+function toggleEye(id, btn){
+  const inp=document.getElementById(id);
+  inp.type = inp.type==='password' ? 'text' : 'password';
+  btn.innerHTML = inp.type==='password' ? EYE_ON : EYE_OFF;
+}
+
+/* ── full phone (cc + number) ──────────── */
+function fullPhone(){
+  const cc = document.getElementById('r-cc').value;
+  const num = document.getElementById('r-phone').value.trim().replace(/^0+/,'');
+  return cc + num;
+}
+
+/* ══════ LOGIN ══════════════════════════ */
+async function doLogin(){
+  const email = document.getElementById('l-email').value.trim();
+  const pass  = document.getElementById('l-pass').value;
+  const btn   = document.getElementById('l-btn');
+  ha('l-err'); ha('l-ok');
+  if(!email||!pass){ sa('l-err','Please fill in all fields.'); return }
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Signing in…';
+  try{
+    const r = await fetch('/api/auth/login',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email, password:pass})
+    });
+    const d = await r.json();
+    if(!r.ok){ sa('l-err', d.error||'Invalid email or password.') }
+    else{
+      sa('l-ok','✓ Signed in — redirecting…');
+      setTimeout(()=>{ window.location.href = d.role==='superuser' ? '/admin' : '/' }, 700);
+    }
+  } catch{ sa('l-err','Network error. Please try again.') }
+  finally{ btn.disabled=false; btn.innerHTML='Sign In' }
+}
+document.addEventListener('keydown', e=>{
+  if(e.key==='Enter' && document.getElementById('panel-login').classList.contains('active')) doLogin();
+});
+
+/* ══════ REGISTER STEP 1 ════════════════ */
+async function doRegStep1(){
+  const name  = document.getElementById('r-name').value.trim();
+  const email = document.getElementById('r-email').value.trim();
+  const phone = fullPhone();
+  const pass  = document.getElementById('r-pass').value;
+  const pass2 = document.getElementById('r-pass2').value;
+  const btn   = document.getElementById('r-btn1');
+  ha('r-err1');
+
+  if(!name||!email||!phone||!pass||!pass2){ sa('r-err1','Please fill in all fields.'); return }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ sa('r-err1','Enter a valid email address.'); return }
+  if(phone.replace('+','').length < 7){ sa('r-err1','Enter a valid mobile number.'); return }
+  if(pass.length < 8){ sa('r-err1','Password must be at least 8 characters.'); return }
+  if(pass !== pass2){ sa('r-err1','Passwords do not match.'); return }
+
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Sending SMS…';
+  try{
+    const r = await fetch('/api/auth/send-otp',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name, email, phone})
+    });
+    const d = await r.json();
+    if(!r.ok){ sa('r-err1', d.error||'Could not send SMS OTP.') }
+    else{
+      RE=email; RN=name; RP=pass; RPHONE=phone;
+      document.getElementById('sms-phone-display').textContent = phone;
+      showS2();
+    }
+  } catch{ sa('r-err1','Network error. Please try again.') }
+  finally{ btn.disabled=false; btn.innerHTML='Send SMS Code →' }
+}
+
+function showS2(){
+  document.getElementById('s1').style.display='none';
+  document.getElementById('s2').style.display='block';
+  clearOTP(); startTimer(600);
+  document.getElementById('o0').focus();
+}
+function backToS1(){
+  clearInterval(timerID);
+  document.getElementById('s2').style.display='none';
+  document.getElementById('s1').style.display='block';
+}
+
+/* ── OTP cells ─────────────────────────── */
+function clearOTP(){
+  for(let i=0;i<6;i++){ const c=document.getElementById('o'+i); c.value=''; c.classList.remove('filled','bad') }
+}
+function oi(i){
+  const c = document.getElementById('o'+i);
+  const v = c.value.replace(/\D/g,''); c.value = v.slice(-1);
+  c.classList.toggle('filled', !!v);
+  if(v && i<5) document.getElementById('o'+(i+1)).focus();
+  ha('r-err2'); ha('r-ok2');
+}
+function ok_(e,i){
+  if(e.key==='Backspace'){
+    const c=document.getElementById('o'+i);
+    if(!c.value && i>0){ const p=document.getElementById('o'+(i-1)); p.value=''; p.classList.remove('filled'); p.focus() }
+  }
+  if(e.key==='ArrowLeft'  && i>0) document.getElementById('o'+(i-1)).focus();
+  if(e.key==='ArrowRight' && i<5) document.getElementById('o'+(i+1)).focus();
+}
+function getOTP(){ return Array.from({length:6},(_,i)=>document.getElementById('o'+i).value).join('') }
+
+/* ── countdown timer ───────────────────── */
+function startTimer(s){
+  clearInterval(timerID);
+  const el = document.getElementById('otp-timer');
+  const rb = document.getElementById('resend-btn');
+  rb.disabled = true;
+  el.style.color = 'var(--accent3)';
+  let rem = s; el.textContent = fmt(rem);
+  timerID = setInterval(()=>{
+    rem--; el.textContent = fmt(rem);
+    if(rem<=0){ clearInterval(timerID); el.textContent='Expired'; el.style.color='var(--err)'; rb.disabled=false }
+  }, 1000);
+}
+function fmt(s){ return Math.floor(s/60)+':'+String(s%60).padStart(2,'0') }
+
+/* ══════ VERIFY OTP ═════════════════════ */
+async function doVerify(){
+  const otp = getOTP();
+  const btn = document.getElementById('r-btn2');
+  ha('r-err2'); ha('r-ok2');
+  if(otp.length!==6){
+    sa('r-err2','Enter all 6 digits from the SMS.');
+    for(let i=0;i<6;i++) document.getElementById('o'+i).classList.add('bad');
+    return;
+  }
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Verifying…';
+  try{
+    const r = await fetch('/api/auth/verify-otp',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({phone:RPHONE, email:RE, name:RN, password:RP, otp})
+    });
+    const d = await r.json();
+    if(!r.ok){
+      for(let i=0;i<6;i++) document.getElementById('o'+i).classList.add('bad');
+      sa('r-err2', d.error||'Incorrect code. Please try again.');
+    } else {
+      clearInterval(timerID);
+      document.getElementById('s2').style.display='none';
+      document.getElementById('s3').style.display='block';
+    }
+  } catch{ sa('r-err2','Network error. Please try again.') }
+  finally{ btn.disabled=false; btn.innerHTML='Verify & Create Account' }
+}
+
+/* ══════ RESEND OTP ═════════════════════ */
+async function doResend(){
+  const btn = document.getElementById('resend-btn');
+  ha('r-err2'); ha('r-ok2'); btn.disabled=true;
+  try{
+    const r = await fetch('/api/auth/send-otp',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name:RN, email:RE, phone:RPHONE})
+    });
+    const d = await r.json();
+    if(!r.ok){ sa('r-err2', d.error||'Could not resend SMS.'); btn.disabled=false }
+    else{
+      clearOTP(); startTimer(600);
+      sa('r-ok2','✓ New SMS sent to '+RPHONE);
+      document.getElementById('o0').focus();
+    }
+  } catch{ sa('r-err2','Network error.'); btn.disabled=false }
+}
+</script>
+</body>
+</html>

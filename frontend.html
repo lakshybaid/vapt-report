@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VAPT Report Generator · Ethical Byte</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ─── TOKENS ───────────────────────────────────────────────────────────── */
+:root{
+  --ink:#0B1120; --ink2:#111827; --ink3:#1E2A3A;
+  --panel:#182030; --panel2:#1C2840;
+  --rim:#253348; --rim2:#2E4060;
+  --txt:#D9E4F0; --txt2:#94A8C2; --txt3:#56708A;
+  --accent:#4472C4; --accent2:#2F5496; --accent3:#5B9BD5;
+  --glow:rgba(68,114,196,.25);
+  --red:#C00000; --orange:#c2410c; --yellow:#a16207; --green:#166534;
+  --sev-crit:#C00000; --sev-high:#FF4444; --sev-med:#FFC000; --sev-low:#92D050;
+  --err:#ef4444; --err-rim:rgba(239,68,68,.3); --err-bg:rgba(239,68,68,.06);
+  --mono:'IBM Plex Mono',monospace; --ui:'Space Grotesk',sans-serif;
+  --r:6px; --r2:10px; --r3:14px;
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+
+body{
+  font-family:var(--ui);background:var(--ink);color:var(--txt);
+  min-height:100vh;
+  background-image:
+    radial-gradient(ellipse 120% 60% at 70% -10%, rgba(68,114,196,.12) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 40% at 0% 80%, rgba(47,84,150,.08) 0%, transparent 50%);
+}
+
+/* ─── TOPBAR ──────────────────────────────────────────────────────────── */
+.topbar{
+  height:54px;display:flex;align-items:center;gap:1rem;
+  padding:0 2rem;
+  background:rgba(11,17,32,.7);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--rim);
+  position:sticky;top:0;z-index:100;
+}
+.topbar-logo img{height:26px;display:block}
+.topbar-pipe{width:1px;height:18px;background:var(--rim2)}
+.topbar-tag{
+  font-family:var(--mono);font-size:.6rem;color:var(--txt3);
+  background:var(--panel);border:1px solid var(--rim);
+  padding:.15rem .55rem;border-radius:20px;letter-spacing:1.5px;text-transform:uppercase}
+.topbar-nav{margin-left:auto;display:flex;gap:.2rem}
+.topbar-nav a{
+  font-family:var(--mono);font-size:.65rem;color:var(--txt3);
+  text-decoration:none;padding:.3rem .7rem;border-radius:var(--r);
+  letter-spacing:.8px;text-transform:uppercase;
+  transition:all .15s var(--ease)}
+.topbar-nav a:hover{color:var(--txt);background:var(--panel2)}
+.topbar-nav a.on{color:var(--accent3);background:rgba(68,114,196,.12);border:1px solid rgba(68,114,196,.25)}
+
+/* ─── LAYOUT ──────────────────────────────────────────────────────────── */
+.wrap{max-width:940px;margin:0 auto;padding:2.5rem 1.5rem 7rem}
+
+/* ─── HERO ────────────────────────────────────────────────────────────── */
+.hero{margin-bottom:2.5rem}
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:.5rem;
+  font-family:var(--mono);font-size:.6rem;color:var(--accent3);
+  text-transform:uppercase;letter-spacing:2.5px;
+  background:rgba(68,114,196,.08);border:1px solid rgba(68,114,196,.2);
+  padding:.25rem .75rem;border-radius:20px;margin-bottom:.85rem}
+.hero-eyebrow::before{content:'';width:6px;height:6px;border-radius:50%;
+  background:var(--accent3);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.hero h1{
+  font-size:1.85rem;font-weight:700;line-height:1.15;
+  color:var(--txt);letter-spacing:-.02em;margin-bottom:.4rem}
+.hero h1 em{
+  font-style:normal;
+  background:linear-gradient(100deg,var(--accent3),var(--accent));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:.85rem;color:var(--txt2);line-height:1.65;max-width:480px}
+
+/* ─── STEP STRIP ──────────────────────────────────────────────────────── */
+.steps{
+  display:flex;align-items:center;gap:.35rem;
+  margin-bottom:1.5rem;padding:.6rem .85rem;
+  background:var(--panel);border:1px solid var(--rim);border-radius:var(--r3);
+  overflow-x:auto}
+.step{
+  display:flex;align-items:center;gap:.4rem;
+  font-size:.72rem;font-family:var(--mono);color:var(--txt3);
+  white-space:nowrap;padding:.2rem .5rem;border-radius:var(--r)}
+.step-n{
+  width:18px;height:18px;border-radius:50%;
+  background:var(--rim2);color:var(--txt3);
+  font-size:.6rem;font-weight:600;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step.done .step-n{background:rgba(68,114,196,.3);color:var(--accent3)}
+.step.active .step-n{background:var(--accent);color:#fff;box-shadow:0 0 8px var(--glow)}
+.step.active{color:var(--txt)}
+.step-sep{width:20px;height:1px;background:var(--rim2);flex-shrink:0}
+
+/* ─── SECTION ─────────────────────────────────────────────────────────── */
+.sec{margin-bottom:1.25rem}
+.sec-head{
+  display:flex;align-items:center;gap:.6rem;
+  font-family:var(--mono);font-size:.6rem;color:var(--txt2);
+  text-transform:uppercase;letter-spacing:2px;
+  margin-bottom:.65rem}
+.sec-head::after{content:'';flex:1;height:1px;background:var(--rim)}
+.sec-num{
+  width:20px;height:20px;border-radius:50%;
+  background:rgba(68,114,196,.15);border:1px solid rgba(68,114,196,.3);
+  font-size:.6rem;color:var(--accent3);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* ─── PANEL ───────────────────────────────────────────────────────────── */
+.pnl{
+  background:var(--panel);border:1px solid var(--rim);
+  border-radius:var(--r3);padding:1.4rem;
+  box-shadow:0 2px 12px rgba(0,0,0,.25)}
+
+/* ─── GRID ────────────────────────────────────────────────────────────── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.8rem}
+@media(max-width:620px){.g2,.g3{grid-template-columns:1fr}}
+.full{grid-column:1/-1}
+
+/* ─── FIELDS ──────────────────────────────────────────────────────────── */
+.fld{display:flex;flex-direction:column;gap:.35rem}
+label{
+  font-size:.65rem;font-weight:500;color:var(--txt2);
+  text-transform:uppercase;letter-spacing:1px;font-family:var(--mono);
+  display:flex;align-items:center;gap:.3rem}
+.req{color:var(--err);font-size:.65rem}
+
+input,textarea,select{
+  font-family:var(--ui);font-size:.875rem;color:var(--txt);
+  background:var(--ink3);border:1px solid var(--rim2);border-radius:var(--r);
+  padding:.6rem .85rem;width:100%;outline:none;
+  transition:border-color .15s,box-shadow .15s,background .15s;
+  -webkit-appearance:none}
+input:focus,textarea:focus,select:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--glow);
+  background:var(--panel2)}
+input::placeholder,textarea::placeholder{color:var(--txt3)}
+textarea{resize:vertical;min-height:72px;line-height:1.6}
+select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2356708A' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .75rem center;padding-right:2.2rem}
+select option,select optgroup{background:var(--ink3)}
+
+.fld.invalid input,.fld.invalid textarea,.fld.invalid select{
+  border-color:var(--err)!important;box-shadow:0 0 0 3px var(--err-bg)!important}
+.fld-err{
+  font-size:.63rem;color:var(--err);font-family:var(--mono);
+  display:none;align-items:center;gap:.3rem}
+.fld-err::before{content:'▲';font-size:.5rem}
+.fld.invalid .fld-err{display:flex}
+
+/* ─── URL TAGS ────────────────────────────────────────────────────────── */
+.url-wrap{
+  background:var(--ink3);border:1px solid var(--rim2);border-radius:var(--r);
+  padding:.4rem .6rem;display:flex;flex-wrap:wrap;gap:.3rem;align-items:center;
+  min-height:42px;cursor:text;transition:border-color .15s,box-shadow .15s}
+.url-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow);background:var(--panel2)}
+.fld.invalid .url-wrap{border-color:var(--err)!important;box-shadow:0 0 0 3px var(--err-bg)!important}
+.utag{
+  display:inline-flex;align-items:center;gap:.3rem;
+  background:rgba(68,114,196,.12);color:var(--accent3);
+  border:1px solid rgba(68,114,196,.25);
+  border-radius:4px;padding:1px 7px;font-size:.68rem;font-family:var(--mono);max-width:260px}
+.utag span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.utag-x{background:none;border:none;color:var(--accent3);opacity:.5;cursor:pointer;font-size:.7rem;padding:0;line-height:1;transition:opacity .1s}
+.utag-x:hover{opacity:1}
+.url-inp{border:none;background:none;outline:none;font-size:.83rem;color:var(--txt);flex:1;min-width:140px;padding:.1rem .15rem;font-family:var(--ui)}
+.url-inp::placeholder{color:var(--txt3)}
+.url-hint{font-size:.6rem;color:var(--txt3);font-family:var(--mono)}
+
+/* ─── VULN CARD ───────────────────────────────────────────────────────── */
+.vc{
+  background:var(--ink2);border:1px solid var(--rim);border-radius:var(--r2);
+  margin-bottom:.7rem;overflow:hidden;
+  transition:border-color .2s,box-shadow .2s}
+.vc:hover{border-color:var(--rim2);box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.vc.err{border-color:var(--err-rim)}
+
+.vc-head{
+  display:flex;align-items:center;gap:.65rem;
+  padding:.6rem 1rem;background:var(--panel);
+  border-bottom:1px solid var(--rim);cursor:pointer;
+  user-select:none;transition:background .12s}
+.vc-head:hover{background:var(--panel2)}
+.vid{
+  font-family:var(--mono);font-size:.6rem;color:var(--accent3);
+  background:rgba(68,114,196,.1);border:1px solid rgba(68,114,196,.25);
+  border-radius:4px;padding:2px 8px;min-width:46px;text-align:center;letter-spacing:.5px}
+.vtit{flex:1;font-size:.85rem;font-weight:500;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.varr{font-size:.65rem;color:var(--txt3);transition:transform .2s;flex-shrink:0}
+.varr.o{transform:rotate(90deg)}
+.vbody{padding:1.25rem;display:none}
+.vbody.o{display:block}
+
+/* severity pill */
+.sev{
+  display:inline-flex;align-items:center;padding:2px 10px;
+  border-radius:20px;font-size:.6rem;font-family:var(--mono);
+  font-weight:500;letter-spacing:1px;text-transform:uppercase;flex-shrink:0}
+.sev-Critical{background:rgba(192,0,0,.18);color:#ff9999;border:1px solid rgba(192,0,0,.3)}
+.sev-High    {background:rgba(255,68,68,.15);color:#ff8888;border:1px solid rgba(255,68,68,.25)}
+.sev-Medium  {background:rgba(255,192,0,.13);color:#ffd055;border:1px solid rgba(255,192,0,.25)}
+.sev-Low     {background:rgba(146,208,80,.1);color:#a8d96b;border:1px solid rgba(146,208,80,.25)}
+.sev-Info    {background:rgba(91,155,213,.12);color:#7ec2f0;border:1px solid rgba(91,155,213,.25)}
+
+/* ─── POC ─────────────────────────────────────────────────────────────── */
+.poc-wrap{display:flex;flex-direction:column;gap:.45rem}
+.poc-zone{
+  border:1px dashed var(--rim2);border-radius:var(--r);padding:.7rem 1rem;
+  background:var(--ink);cursor:pointer;
+  transition:all .15s;display:flex;align-items:center;justify-content:center;
+  gap:.5rem;font-size:.72rem;color:var(--txt3);font-family:var(--mono);min-height:48px}
+.poc-zone:hover,.poc-zone.drag{border-color:var(--accent);background:rgba(68,114,196,.05);color:var(--accent3)}
+.poc-zone input[type=file]{display:none}
+.poc-thumbs{display:flex;flex-wrap:wrap;gap:.4rem}
+.poc-thumb{position:relative}
+.poc-thumb img{max-width:130px;max-height:82px;border-radius:5px;
+  border:1px solid var(--rim2);display:block;object-fit:cover}
+.poc-thumb-x{position:absolute;top:-5px;right:-5px;width:17px;height:17px;
+  background:var(--err);color:#fff;border:none;border-radius:50%;
+  font-size:.58rem;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-weight:700;transition:transform .1s}
+.poc-thumb-x:hover{transform:scale(1.1)}
+
+/* ─── BUTTONS ─────────────────────────────────────────────────────────── */
+.add-v{
+  width:100%;padding:.7rem;margin-top:.35rem;
+  border:1px dashed var(--rim2);border-radius:var(--r);
+  background:none;color:var(--txt3);font-size:.82rem;
+  font-family:var(--ui);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:.45rem;
+  transition:all .15s}
+.add-v:hover{border-color:var(--accent);color:var(--accent3);background:rgba(68,114,196,.05)}
+
+.rm-v{
+  background:none;border:1px solid var(--err-rim);color:var(--err);
+  border-radius:var(--r);padding:4px 14px;font-size:.7rem;font-family:var(--mono);
+  cursor:pointer;transition:all .12s;margin-top:.75rem;letter-spacing:.5px}
+.rm-v:hover{background:var(--err-bg)}
+
+.gen{
+  width:100%;padding:.95rem 1.5rem;
+  background:linear-gradient(135deg,var(--accent) 0%,var(--accent2) 100%);
+  color:#fff;border:none;border-radius:var(--r2);
+  font-size:.92rem;font-weight:600;font-family:var(--ui);letter-spacing:.01em;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.55rem;
+  transition:all .2s;position:relative;overflow:hidden;
+  box-shadow:0 0 0 1px rgba(255,255,255,.08) inset,0 4px 20px rgba(68,114,196,.35)}
+.gen::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(255,255,255,.07) 0%,transparent 60%);pointer-events:none}
+.gen:hover{transform:translateY(-2px);box-shadow:0 0 0 1px rgba(255,255,255,.08) inset,0 8px 28px rgba(68,114,196,.5)}
+.gen:active{transform:none;box-shadow:none}
+.gen:disabled{background:var(--panel);box-shadow:none;cursor:not-allowed;transform:none;color:var(--txt3)}
+
+/* ─── FORMAT PICKER ───────────────────────────────────────────────────── */
+.fmt-g{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+.fmt-r{display:none}
+.fmt-l{
+  display:flex;align-items:center;justify-content:center;gap:.55rem;
+  border:1px solid var(--rim2);border-radius:var(--r2);padding:.9rem;
+  cursor:pointer;font-weight:500;font-size:.85rem;color:var(--txt2);
+  transition:all .15s;background:var(--ink3)}
+.fmt-l:hover{border-color:var(--accent);color:var(--txt)}
+.fmt-r:checked+.fmt-l{
+  border-color:var(--accent);color:var(--accent3);
+  background:rgba(68,114,196,.08);
+  box-shadow:0 0 0 1px rgba(68,114,196,.25)}
+
+/* ─── ERROR BOX ───────────────────────────────────────────────────────── */
+.err-box{
+  display:none;margin-top:.85rem;
+  background:var(--err-bg);border:1px solid var(--err-rim);border-radius:var(--r2);
+  padding:.85rem 1.1rem}
+.err-ttl{font-family:var(--mono);font-size:.6rem;color:var(--err);
+  text-transform:uppercase;letter-spacing:2px;margin-bottom:.35rem}
+.err-msg{font-size:.82rem;color:#fca5a5;white-space:pre-wrap;word-break:break-word}
+.err-hint{margin-top:.4rem;font-size:.7rem;color:var(--txt3)}
+
+/* ─── TOAST ───────────────────────────────────────────────────────────── */
+#toast{
+  position:fixed;bottom:1.75rem;right:1.75rem;
+  background:var(--panel2);color:var(--txt);
+  border:1px solid var(--rim2);border-radius:var(--r2);
+  padding:.65rem 1rem;font-size:.75rem;font-family:var(--mono);
+  box-shadow:0 8px 30px rgba(0,0,0,.5);
+  opacity:0;transform:translateY(10px) scale(.97);
+  transition:all .2s var(--ease);pointer-events:none;z-index:9999;max-width:320px}
+#toast.show{opacity:1;transform:none}
+#toast.ok{border-color:rgba(146,208,80,.4);color:#a8d96b;background:rgba(146,208,80,.07)}
+#toast.er{border-color:var(--err-rim);color:#fca5a5;background:var(--err-bg)}
+
+.spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.2);
+  border-top-color:#fff;border-radius:50%;animation:sp .65s linear infinite;flex-shrink:0}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-logo"><img src="data:image/png;base64,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" alt="Ethical Byte"></div>
+  <div class="topbar-pipe"></div>
+  <span class="topbar-tag">VAPT Generator</span>
+  <nav class="topbar-nav">
+    <a href="/" class="on">Generator</a>
+    <a href="/admin">Admin</a>
+    <span id="topbar-user" style="font-family:var(--mono);font-size:.6rem;color:var(--txt3);padding:.3rem .7rem"></span>
+    <a href="/auth/logout" style="font-family:var(--mono);font-size:.65rem;color:var(--txt3);text-decoration:none;padding:.3rem .7rem;border-radius:var(--r);letter-spacing:.8px;text-transform:uppercase;transition:all .15s var(--ease);border:1px solid var(--rim2)" onmouseover="this.style.color='var(--txt)'" onmouseout="this.style.color='var(--txt3)'">Sign Out</a>
+  </nav>
+</header>
+
+<div class="wrap">
+
+  <div class="hero">
+    <div class="hero-eyebrow">Ethical Byte Security</div>
+    <h1>VAPT <em>Report Generator</em></h1>
+    <p>Generate a professional penetration test report in Word or PDF, pixel-matched to the Ethical Byte template.</p>
+  </div>
+
+  <!-- ── STEP 1: Org ──────────────────────────────────────────────── -->
+  <div class="sec">
+    <div class="sec-head"><span class="sec-num">1</span>Organization</div>
+    <div class="pnl">
+      <div class="g2">
+        <div class="fld" id="fld-orgName">
+          <label>Organization Name <span class="req">*</span></label>
+          <input id="orgName" type="text" placeholder="Acme Corp">
+          <div class="fld-err">Required</div>
+        </div>
+        <div class="fld" id="fld-reportDate">
+          <label>Report Date <span class="req">*</span></label>
+          <input id="reportDate" type="date">
+          <div class="fld-err">Required</div>
+        </div>
+        <div class="fld full" id="fld-preparerName">
+          <label>Prepared By <span class="req">*</span></label>
+          <input id="preparerName" type="text" placeholder="Analyst name or team">
+          <div class="fld-err">Required</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 2: Summary ─────────────────────────────────────────── -->
+  <div class="sec">
+    <div class="sec-head"><span class="sec-num">2</span>Scope &amp; Summary</div>
+    <div class="pnl">
+      <div class="g2">
+        <div class="fld full" id="fld-execSummary">
+          <label>Executive Summary <span class="req">*</span></label>
+          <textarea id="execSummary" rows="3" placeholder="High-level overview of the assessment findings…"></textarea>
+          <div class="fld-err">Required</div>
+        </div>
+        <div class="fld full" id="fld-scope">
+          <label>Scope / Target <span class="req">*</span></label>
+          <textarea id="scope" rows="2" placeholder="URLs, IP ranges, or application names assessed…"></textarea>
+          <div class="fld-err">Required</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 3: Vulns ───────────────────────────────────────────── -->
+  <div class="sec">
+    <div class="sec-head"><span class="sec-num">3</span>Vulnerabilities</div>
+    <div class="pnl">
+      <div id="vlist"></div>
+      <button class="add-v" onclick="addVuln()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Add Vulnerability
+      </button>
+    </div>
+  </div>
+
+  <!-- ── STEP 4: Format ──────────────────────────────────────────── -->
+  <div class="sec">
+    <div class="sec-head"><span class="sec-num">4</span>Output Format</div>
+    <div class="pnl">
+      <div class="fmt-g">
+        <div>
+          <input type="radio" name="fmt" id="f-docx" class="fmt-r" value="docx" checked>
+          <label for="f-docx" class="fmt-l">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/>
+            </svg>
+            Word (.docx)
+          </label>
+        </div>
+        <div>
+          <input type="radio" name="fmt" id="f-pdf" class="fmt-r" value="pdf">
+          <label for="f-pdf" class="fmt-l">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <path d="M9 15v-2h6v2"/><line x1="12" y1="13" x2="12" y2="17"/>
+            </svg>
+            PDF
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="gen" id="genBtn" onclick="generate()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+    Generate &amp; Download Report
+  </button>
+
+  <div class="err-box" id="errBox">
+    <div class="err-ttl">⚠ Error</div>
+    <div class="err-msg" id="errMsg"></div>
+    <div class="err-hint">Check the terminal running <code>python3 backend.py</code></div>
+  </div>
+
+</div>
+<div id="toast"></div>
+
+<script>
+// Auth check
+fetch('/auth/me').then(r=>r.json()).then(u=>{
+  if(!u.authenticated){window.location.href='/login';return;}
+  const el=document.getElementById('topbar-user');
+  if(el)el.textContent=u.email;
+}).catch(()=>{window.location.href='/login';});
+
+let vc=0;
+document.getElementById('reportDate').value=new Date().toISOString().split('T')[0];
+
+/* ── OWASP ─────────────────────────────────────── */
+const OW=['A01:2021 – Broken Access Control','A02:2021 – Cryptographic Failures','A03:2021 – Injection','A04:2021 – Insecure Design','A05:2021 – Security Misconfiguration','A06:2021 – Vulnerable and Outdated Components','A07:2021 – Identification and Authentication Failures','A08:2021 – Software and Data Integrity Failures','A09:2021 – Security Logging and Monitoring Failures','A10:2021 – Server-Side Request Forgery (SSRF)'];
+const OA=['API1:2023 – Broken Object Level Authorization','API2:2023 – Broken Authentication','API3:2023 – Broken Object Property Level Authorization','API4:2023 – Unrestricted Resource Consumption','API5:2023 – Broken Function Level Authorization','API6:2023 – Unrestricted Access to Sensitive Business Flows','API7:2023 – Server Side Request Forgery','API8:2023 – Security Misconfiguration','API9:2023 – Improper Inventory Management','API10:2023 – Unsafe Consumption of APIs'];
+const OL=['LLM01:2025 – Prompt Injection','LLM02:2025 – Sensitive Information Disclosure','LLM03:2025 – Supply Chain Vulnerabilities','LLM04:2025 – Data and Model Poisoning','LLM05:2025 – Improper Output Handling','LLM06:2025 – Excessive Agency','LLM07:2025 – System Prompt Leakage','LLM08:2025 – Vector and Embedding Weaknesses','LLM09:2025 – Misinformation','LLM10:2025 – Unbounded Consumption'];
+function owaspSel(sid,sel){
+  const g=[{l:'OWASP Web Top 10 (2021)',d:OW},{l:'OWASP API Security Top 10 (2023)',d:OA},{l:'OWASP LLM Top 10 (2025)',d:OL}];
+  let h='<select id="'+sid+'"><option value="">-- Select OWASP Category --</option>';
+  for(const x of g){h+='<optgroup label="'+x.l+'">';for(const it of x.d)h+='<option value="'+it+'"'+(it===sel?' selected':'')+'>'+it+'</option>';h+='</optgroup>';}
+  return h+'</select>';
+}
+
+/* ── URL tags ──────────────────────────────────── */
+const UT={};
+function isUrl(s){try{const u=new URL(s);return u.protocol==='http:'||u.protocol==='https:';}catch{return false;}}
+function renderTags(fid){
+  const tags=UT[fid]||[],wrap=document.getElementById('tg-'+fid);
+  if(!wrap)return;
+  wrap.innerHTML=tags.map((u,i)=>'<span class="utag"><span title="'+esc(u)+'">'+esc(u)+'</span><button class="utag-x" onclick="rmTag(\''+fid+'\','+i+')">&#10005;</button></span>').join('');
+  const h=document.getElementById('uh-'+fid);if(h)h.value=tags.join('\n');
+}
+function rmTag(fid,i){if(UT[fid]){UT[fid].splice(i,1);renderTags(fid);}}
+function addTag(fid,raw){
+  const parts=raw.split(/[\s,]+/).map(s=>s.trim()).filter(Boolean);
+  let bad=0;
+  for(const u of parts){if(!isUrl(u)){bad++;continue;}if(!UT[fid])UT[fid]=[];if(!UT[fid].includes(u))UT[fid].push(u);}
+  renderTags(fid);if(bad)toast(bad+' invalid URL(s) skipped','er');
+}
+function urlKD(e,fid){
+  if(e.key==='Enter'||e.key===','){e.preventDefault();const i=document.getElementById('ui-'+fid);if(i.value.trim()){addTag(fid,i.value);i.value='';}}
+  else if(e.key==='Backspace'){const i=document.getElementById('ui-'+fid);if(!i.value&&UT[fid]?.length){UT[fid].pop();renderTags(fid);}}
+}
+function urlBl(fid){const i=document.getElementById('ui-'+fid);if(i&&i.value.trim()){addTag(fid,i.value);i.value='';}}
+function urlPst(e,fid){e.preventDefault();const t=(e.clipboardData||window.clipboardData).getData('text'),i=document.getElementById('ui-'+fid);addTag(fid,(i.value+' '+t).trim());i.value='';}
+function getUrls(fid){return(UT[fid]||[]).join('\n');}
+function urlWidget(fid,hid){
+  return'<div class="url-wrap" id="uw-'+fid+'" onclick="document.getElementById(\'ui-'+fid+'\').focus()"><span id="tg-'+fid+'"></span><input class="url-inp" id="ui-'+fid+'" placeholder="https://example.com/endpoint" onkeydown="urlKD(event,\''+fid+'\')" onblur="urlBl(\''+fid+'\')" onpaste="urlPst(event,\''+fid+'\')" autocomplete="off"></div><input type="hidden" id="'+hid+'"><div class="url-hint">Enter then comma to add · backspace to remove</div>';
+}
+
+/* ── POC images ────────────────────────────────── */
+const PI={};
+function pocWidget(id,initTxt){
+  return'<div class="poc-wrap">'+
+    '<textarea id="'+id+'-poc" rows="3" placeholder="Step-by-step exploitation details…">'+esc(initTxt||'')+'</textarea>'+
+    '<div class="poc-zone" id="pz-'+id+'" onclick="document.getElementById(\'pf-'+id+'\').click()" ondragover="pdov(event,\''+id+'\')" ondragleave="pdlv(\''+id+'\')" ondrop="pdrop(event,\''+id+'\')" onpaste="ppaste(event,\''+id+'\')" tabindex="0">'+
+      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'+
+      'Upload · drag &amp; drop · Ctrl+V paste'+
+      '<input type="file" id="pf-'+id+'" accept="image/*" multiple onchange="pfc(event,\''+id+'\')">'+
+    '</div>'+
+    '<div class="poc-thumbs" id="pt-'+id+'"></div>'+
+  '</div>';
+}
+function rdrPoc(vid){
+  const imgs=PI[vid]||[],c=document.getElementById('pt-'+vid);if(!c)return;
+  c.innerHTML=imgs.map((s,i)=>'<div class="poc-thumb"><img src="'+s+'"><button class="poc-thumb-x" onclick="rmPoc(\''+vid+'\','+i+')">&#10005;</button></div>').join('');
+}
+function rmPoc(vid,i){if(PI[vid]){PI[vid].splice(i,1);rdrPoc(vid);}}
+function pdov(e,id){e.preventDefault();document.getElementById('pz-'+id)?.classList.add('drag');}
+function pdlv(id){document.getElementById('pz-'+id)?.classList.remove('drag');}
+function pdrop(e,id){e.preventDefault();pdlv(id);[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/')).forEach(f=>rPocFile(f,id));}
+function ppaste(e,id){const its=[...(e.clipboardData||{items:[]}).items];const imgs=its.filter(i=>i.type.startsWith('image/'));if(imgs.length){e.preventDefault();imgs.forEach(i=>rPocFile(i.getAsFile(),id));}}
+function pfc(e,id){[...e.target.files].forEach(f=>rPocFile(f,id));e.target.value='';}
+function rPocFile(f,id){if(!f)return;const r=new FileReader();r.onload=ev=>{if(!PI[id])PI[id]=[];PI[id].push(ev.target.result);rdrPoc(id);};r.readAsDataURL(f);}
+function getPoc(id){const t=(document.getElementById(id+'-poc')?.value||'').trim(),imgs=PI[id]||[],p=[];if(t)p.push(t);p.push(...imgs);return p.join('||IMG||');}
+
+/* ── Add vuln ──────────────────────────────────── */
+function addVuln(d={}){
+  vc++;const id='v'+vc,sev=d.severity||'Medium';
+  const el=document.createElement('div');el.className='vc';el.id='vc-'+id;
+  UT['u-'+id]=(d.vulnerableUrls||'').split('\n').filter(Boolean);
+  UT['a-'+id]=(d.advisory||'').split('\n').filter(Boolean);
+  PI[id]=[];
+  const sOpts=['Critical','High','Medium','Low','Info'].map(s=>'<option value="'+s+'"'+(s===sev?' selected':'')+'>'+s+'</option>').join('');
+  el.innerHTML=
+    '<div class="vc-head" onclick="togV(\''+id+'\')">'+
+      '<span class="vid">V-'+String(vc).padStart(2,'0')+'</span>'+
+      '<span class="vtit" id="vt-'+id+'">'+(d.title||'New Vulnerability')+'</span>'+
+      '<span class="sev sev-'+sev+'" id="sv-'+id+'">'+sev+'</span>'+
+      '<span class="varr o" id="va-'+id+'">&#9658;</span>'+
+    '</div>'+
+    '<div class="vbody o" id="vb-'+id+'">'+
+    '<div class="g3" style="margin-bottom:.85rem">'+
+      '<div class="fld" id="fld-'+id+'-title" style="grid-column:1/3"><label>Title <span class="req">*</span></label><input id="'+id+'-title" type="text" value="'+esc(d.title||'')+'" placeholder="e.g. SQL Injection in login" oninput="updT(\''+id+'\')"><div class="fld-err">Required</div></div>'+
+      '<div class="fld"><label>Severity <span class="req">*</span></label><select id="'+id+'-sev" onchange="updS(\''+id+'\')">'+sOpts+'</select></div>'+
+      '<div class="fld full" id="fld-'+id+'-owasp"><label>OWASP Mapping <span class="req">*</span></label>'+owaspSel(id+'-owasp',d.owaspMapping||'')+'<div class="fld-err">Select mapping</div></div>'+
+      '<div class="fld full" id="fld-'+id+'-summary"><label>Summary <span class="req">*</span></label><textarea id="'+id+'-summary" rows="3" placeholder="Describe the vulnerability…">'+esc(d.summary||'')+'</textarea><div class="fld-err">Required</div></div>'+
+      '<div class="fld" id="fld-'+id+'-risk"><label>Risk <span class="req">*</span></label><textarea id="'+id+'-risk" rows="2" placeholder="What can an attacker achieve?">'+esc(d.risk||'')+'</textarea><div class="fld-err">Required</div></div>'+
+      '<div class="fld" id="fld-'+id+'-impact"><label>Impact <span class="req">*</span></label><textarea id="'+id+'-impact" rows="2" placeholder="Business impact…">'+esc(d.impact||'')+'</textarea><div class="fld-err">Required</div></div>'+
+      '<div class="fld full" id="fld-'+id+'-adv"><label>Advisory URL <span class="req">*</span></label>'+urlWidget('a-'+id,'uh-a-'+id)+'<div class="fld-err">At least one valid URL required</div></div>'+
+      '<div class="fld full" id="fld-'+id+'-poc"><label>POC / Steps <span class="req">*</span></label>'+pocWidget(id,d.poc||'')+'<div class="fld-err">Steps or screenshot required</div></div>'+
+      '<div class="fld full" id="fld-'+id+'-urls"><label>Vulnerable URL(s) <span class="req">*</span></label>'+urlWidget('u-'+id,'uh-u-'+id)+'<div class="fld-err">At least one valid URL required</div></div>'+
+      '<div class="fld full" id="fld-'+id+'-rem"><label>Remediation <span class="req">*</span></label><textarea id="'+id+'-rem" rows="2" placeholder="How to fix…">'+esc(d.remediation||'')+'</textarea><div class="fld-err">Required</div></div>'+
+    '</div>'+
+    '<button class="rm-v" onclick="rmV(\''+id+'\')">&#10005; Remove</button>'+
+    '</div>';
+  document.getElementById('vlist').appendChild(el);
+  renderTags('u-'+id);renderTags('a-'+id);
+}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function togV(id){document.getElementById('vb-'+id).classList.toggle('o');document.getElementById('va-'+id).classList.toggle('o');}
+function updT(id){document.getElementById('vt-'+id).textContent=document.getElementById(id+'-title').value||'Unnamed';}
+function updS(id){const s=document.getElementById(id+'-sev').value,b=document.getElementById('sv-'+id);b.className='sev sev-'+s;b.textContent=s;}
+function rmV(id){document.getElementById('vc-'+id)?.remove();}
+
+/* ── Validation ────────────────────────────────── */
+function markF(fid,ok){const el=document.getElementById(fid);if(el){el.classList[ok?'remove':'add']('invalid');}return ok;}
+function validate(){
+  let ok=true;
+  const req=(id,v)=>{const val=(v!==undefined)?v:(document.getElementById(id)?.value||'').trim();return markF('fld-'+id,!!val)&&!!val;};
+  if(!req('orgName'))ok=false;
+  if(!req('reportDate'))ok=false;
+  if(!req('preparerName'))ok=false;
+  if(!req('execSummary'))ok=false;
+  if(!req('scope'))ok=false;
+  const els=Array.from(document.querySelectorAll('.vc'));
+  if(!els.length){toast('Add at least one vulnerability','er');return false;}
+  for(const el of els){
+    const id=el.id.replace('vc-','');let vok=true;
+    if(!req(id+'-title'))vok=false;
+    if(!req(id+'-summary'))vok=false;
+    if(!req(id+'-risk'))vok=false;
+    if(!req(id+'-impact'))vok=false;
+    if(!req(id+'-rem'))vok=false;
+    if(!markF('fld-'+id+'-owasp',!!(document.getElementById(id+'-owasp')?.value||'')))vok=false;
+    if(!markF('fld-'+id+'-adv',!!getUrls('a-'+id)))vok=false;
+    if(!markF('fld-'+id+'-urls',!!getUrls('u-'+id)))vok=false;
+    const pt=(document.getElementById(id+'-poc')?.value||'').trim(),pi=(PI[id]||[]).length>0;
+    if(!markF('fld-'+id+'-poc',!!(pt||pi)))vok=false;
+    if(!vok){el.classList.add('err');if(!document.getElementById('vb-'+id).classList.contains('o'))togV(id);ok=false;}
+    else el.classList.remove('err');
+  }
+  if(!ok){const f=document.querySelector('.fld.invalid');if(f)f.scrollIntoView({behavior:'smooth',block:'center'});}
+  return ok;
+}
+
+/* ── Collect ───────────────────────────────────── */
+function getVulns(){
+  return Array.from(document.querySelectorAll('.vc')).map(el=>{
+    const id=el.id.replace('vc-','');
+    return{title:document.getElementById(id+'-title')?.value||'',severity:document.getElementById(id+'-sev')?.value||'Low',owaspMapping:document.getElementById(id+'-owasp')?.value||'',summary:document.getElementById(id+'-summary')?.value||'',risk:document.getElementById(id+'-risk')?.value||'',impact:document.getElementById(id+'-impact')?.value||'',advisory:getUrls('a-'+id),poc:getPoc(id),vulnerableUrls:getUrls('u-'+id),remediation:document.getElementById(id+'-rem')?.value||''};
+  });
+}
+
+function toast(m,t=''){const el=document.getElementById('toast');el.textContent=m;el.className=t?'show '+t:'show';setTimeout(()=>el.className='',3500);}
+
+async function generate(){
+  if(!validate()){toast('Fill in all required fields','er');return;}
+  document.getElementById('errBox').style.display='none';
+  const btn=document.getElementById('genBtn');
+  btn.disabled=true;btn.innerHTML='<div class="spin"></div>&nbsp;Generating…';
+  const org=document.getElementById('orgName').value.trim();
+  const payload={orgName:org,reportDate:document.getElementById('reportDate').value,preparerName:document.getElementById('preparerName').value,execSummary:document.getElementById('execSummary').value,scope:document.getElementById('scope').value,vulnerabilities:getVulns(),format:document.querySelector('input[name="fmt"]:checked').value};
+  try{
+    const res=await fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!res.ok){let m='Server error '+res.status;try{const j=await res.json();m=j.error||m;}catch(_){}throw new Error(m);}
+    const blob=await res.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download='VAPT_Report_'+org.replace(/\s+/g,'_')+'.'+payload.format;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+    toast('Report downloaded!','ok');
+  }catch(e){
+    document.getElementById('errMsg').textContent=e.message;
+    document.getElementById('errBox').style.display='block';
+    document.getElementById('errBox').scrollIntoView({behavior:'smooth',block:'center'});
+    toast('Generation failed','er');
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Generate &amp; Download Report';
+  }
+}
+</script>
+</body>
+</html>
