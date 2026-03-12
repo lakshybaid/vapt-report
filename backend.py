@@ -297,6 +297,45 @@ def generate():
 #  DOCX GENERATION
 # ══════════════════════════════════════════════════════════════════════════
 
+
+def get_logo_for_docx():
+    """Convert logo to white background for DOCX, redrawing Ethical text which was black-on-black."""
+    if not os.path.exists(LOGO_PATH):
+        return None
+    from PIL import Image as PILImg, ImageDraw, ImageFont
+    import numpy as np
+    img = PILImg.open(LOGO_PATH).convert('RGBA')
+    arr = np.array(img)
+    # Remove black background (make transparent)
+    r, g, b = arr[:,:,0].astype(int), arr[:,:,1].astype(int), arr[:,:,2].astype(int)
+    is_bg = (r < 20) & (g < 20) & (b < 20)
+    arr[is_bg, 3] = 0
+    # Composite onto white
+    white = PILImg.new('RGBA', img.size, (255, 255, 255, 255))
+    logo_t = PILImg.fromarray(arr)
+    white.paste(logo_t, mask=logo_t)
+    result = white.convert('RGB')
+    # Redraw 'Ethical' text — it was black-on-black so it disappeared
+    draw = ImageDraw.Draw(result)
+    font_paths = [
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
+    ]
+    font = None
+    for fp in font_paths:
+        if os.path.exists(fp):
+            font = ImageFont.truetype(fp, 26)
+            break
+    if font:
+        bbox = draw.textbbox((0, 0), 'Ethical', font=font)
+        text_h = bbox[3] - bbox[1]
+        y = 12 + (38 - text_h) // 2
+        draw.text((56, y), 'Ethical', fill=(15, 15, 15), font=font)
+    buf = io.BytesIO()
+    result.save(buf, format='PNG')
+    buf.seek(0)
+    return buf
+
 def set_cell_shading(cell, fill_hex):
     """Apply background colour to a table cell."""
     tc = cell._tc
@@ -368,8 +407,9 @@ def generate_docx(org, date, preparer, exec_summary, scope, vulns):
     #  COVER PAGE  (no header/footer — matches template notFirstPage)
     # ══════════════════════════════════════════════════════════════════════
     # Logo centred
-    if os.path.exists(LOGO_PATH):
-        doc.add_picture(LOGO_PATH, width=Inches(2.5))
+    logo_buf = get_logo_for_docx()
+    if logo_buf:
+        doc.add_picture(logo_buf, width=Inches(2.5))
         doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     # Spacing
